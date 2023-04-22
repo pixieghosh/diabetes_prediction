@@ -32,9 +32,9 @@ X_train = SelectFpr(chi2, alpha=0.01).fit_transform(X_train, y_train)
 # %%
 params = {'max_iter':np.arange(1000,4000,1000),
           'max_depth':[13,14,15,16,None],
-          'max_leaf_nodes':[31,40,60],
+          'min_samples_leaf':[40,60,80,100],
           'learning_rate': [0.001,0.01,0.1]}
-clf_hgb = HistGradientBoostingClassifier(random_state= 777)
+clf_hgb = HistGradientBoostingClassifier(random_state= 777, categorical_features= [[0,1,2,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19]])
 gcv = GridSearchCV(clf_hgb, param_grid= params, 
                    n_jobs = 4, cv = 5, 
                    return_train_score = True, 
@@ -48,25 +48,28 @@ print(f'best training F1 score: {gcv.cv_results_["mean_train_f1_weighted"][gcv.b
 print(gcv.best_params_)
 # %%
 with open('hgb_baseline_results_mc.pkl','wb') as results:
-    pickle.dump(gcv,results)
+    pickle.dump(gcv.cv_results_,results)
+
+with open('hgb_baseline_model_mc.pkl','wb') as results:
+    pickle.dump(gcv.best_estimator_,results)
 
 # %%
 results = None
-with open('hgb_baseline_results_mc.pkl','rb') as results:
-    results = pickle.load(results)
+with open('E:\work\diabetes_prediction\hgb_baseline_results_mc.pkl','rb') as results_file:
+    results = pickle.load(results_file)
 
 results
 
-# %%
-y_pred = results.best_estimator_.predict(X_train)
-conf_mat = confusion_matrix(y_true = y_train, y_pred= y_pred)
-conf_mat
-# %%
+model = None
+with open('E:\work\diabetes_prediction\hgb_baseline_model_mc.pkl','rb') as model_file:
+    model = pickle.load(model_file)
 
-# CHANGE NAMES FOR ALL VARS 
-# gbt params
-params = {'max_iter':np.arange(1000,4000,1000),
-          'max_depth':[13,14,15,16,None],
-          'max_leaf_nodes':[31,40,60],
-          'learning_rate': [0.001,0.01,0.1]}
-# HistGradientBoostingClassifier(random_state = 777)
+# %%
+y_pred = model.predict(X_train)
+conf_mat = confusion_matrix(y_true = y_train, y_pred= y_pred)
+conf_mat_df = pd.DataFrame(data = conf_mat, columns= ['Non-Diabetic','Pre-Diabetic','Diabetic'], index = ['Non-Diabetic','Pre-Diabetic','Diabetic'])
+#%%
+axes = sns.heatmap(conf_mat_df, cbar= False, annot= True, fmt = 'd', cmap="crest")
+axes.set_xlabel('Predicted')
+axes.set_ylabel('True')
+# %%
